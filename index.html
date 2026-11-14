@@ -1,0 +1,506 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Bursa Portfolio Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a ledger. Summary strip on top, tabbed work areas below; tables and donuts sit on plain sheets, no card stacks. */
+:root{
+  --bg:#f6f7f5; --sheet:#fcfcfb; --ink:#14201f; --ink-2:#4b5654; --muted:#7f8886;
+  --line:#e0e3df; --line-2:#c9cec9; --accent:#0d6b73; --accent-ink:#ffffff; --accent-soft:#e1efef;
+  --up:#0a7a2f; --down:#c4343a; --flat:#7f8886; --warn-bg:#fff5dc; --warn-ink:#6b4a00;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948; --other:#b9bdb8;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1514; --sheet:#171d1c; --ink:#eef1ef; --ink-2:#bfc7c4; --muted:#8a9491;
+  --line:#28302f; --line-2:#3a4442; --accent:#4fb3ba; --accent-ink:#06201f; --accent-soft:#16302f;
+  --up:#3ccf6a; --down:#ff6b6f; --flat:#8a9491; --warn-bg:#3a2f12; --warn-ink:#f3d58a;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; --other:#5a625f;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --sheet:#171d1c; --ink:#eef1ef; --ink-2:#bfc7c4; --muted:#8a9491;
+  --line:#28302f; --line-2:#3a4442; --accent:#4fb3ba; --accent-ink:#06201f; --accent-soft:#16302f;
+  --up:#3ccf6a; --down:#ff6b6f; --flat:#8a9491; --warn-bg:#3a2f12; --warn-ink:#f3d58a;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; --other:#5a625f;
+  color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:1.65rem} h2{font-size:1.2rem} h3{font-size:1rem}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
+.muted{color:var(--muted)} .small{font-size:.82rem}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.brand .label{color:var(--accent)}
+.pricestamp{font-size:.82rem;color:var(--ink-2);text-align:right}
+.banner{margin-top:16px;padding:12px 14px;border-radius:8px;background:var(--warn-bg);color:var(--warn-ink);display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.banner p{margin:0;min-width:0;flex:1 1 320px}
+/* summary strip */
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:18px}
+.strip>div{background:var(--sheet);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.strip .big{font-family:var(--f-mono);font-size:clamp(1.05rem,3.6vw,1.35rem);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.goalbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:4px}
+.goalbar>i{display:block;height:100%;background:var(--accent);border-radius:3px}
+/* tabs */
+nav.tabs{display:flex;gap:4px;margin-top:22px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs a{padding:10px 14px;color:var(--ink-2);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+nav.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section.view{padding-top:20px;display:flex;flex-direction:column;gap:22px}
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.sheet-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px}
+/* donut */
+.donut{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center}
+.donut svg{width:200px;height:200px;flex:0 0 auto;max-width:100%}
+.legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;flex:1 1 180px;min-width:0}
+.legend li{display:grid;grid-template-columns:12px 1fr auto auto;gap:8px;align-items:center;font-size:.88rem;padding:2px 4px;border-radius:4px}
+.legend li.hot{background:var(--accent-soft)}
+.legend .sw{width:12px;height:12px;border-radius:3px}
+.legend .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend .pc{font-family:var(--f-mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.legend .vl{font-family:var(--f-mono);color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 9px;border-radius:6px;font-size:.8rem;z-index:20;white-space:nowrap}
+/* tables */
+.tscroll{overflow-x:auto;margin:0 -16px;padding:0 16px}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line-2);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+td.r,th.r{text-align:right}
+td .sub{display:block;font-size:.76rem;color:var(--muted)}
+tfoot td{font-weight:600;border-bottom:none;border-top:1px solid var(--line-2)}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.72rem;font-weight:600;letter-spacing:.03em}
+.chip.buy{background:var(--accent-soft);color:var(--accent)}
+.chip.sell{background:color-mix(in srgb,var(--down) 14%,transparent);color:var(--down)}
+.chip.div{background:color-mix(in srgb,var(--up) 14%,transparent);color:var(--up)}
+.chip.pending{background:var(--warn-bg);color:var(--warn-ink)}
+/* forms */
+form.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:var(--ink-2);font-weight:500;min-width:0}
+input,select{font:inherit;font-size:.92rem;padding:8px 10px;border:1px solid var(--line-2);border-radius:6px;background:var(--bg);color:var(--ink);width:100%;min-width:0}
+button{font:inherit;font-weight:600;font-size:.88rem;padding:8px 14px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--accent)}
+button.link{background:none;border:none;color:var(--muted);padding:4px 6px;font-weight:500}
+button.link:hover{color:var(--down)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.formmsg{font-size:.82rem;min-height:1.2em;margin-top:8px}
+/* watchlist */
+.sectors{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:16px}
+.sector h3{display:flex;justify-content:space-between;align-items:baseline;font-size:.95rem;padding-bottom:6px;border-bottom:1px solid var(--line-2);margin-bottom:2px}
+.wl{list-style:none;margin:0;padding:0}
+.wl li{display:grid;grid-template-columns:minmax(0,1fr) 64px 64px 58px 24px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:.88rem}
+.wl .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl .nm small{color:var(--muted);font-family:var(--f-mono);font-size:.72rem;margin-left:4px}
+.spark{width:64px;height:22px}
+.empty{padding:28px 12px;text-align:center;color:var(--ink-2)}
+.empty b{display:block;font-family:var(--f-display);font-size:1.05rem;color:var(--ink);margin-bottom:4px}
+.targets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.alloc td .bar{display:inline-block;height:8px;border-radius:2px;vertical-align:middle;background:var(--accent)}
+.alloc td .bar.t{background:var(--line-2)}
+footer{margin-top:36px;font-size:.78rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="label">Investment Talk · Bursa Malaysia</div>
+      <h1 id="title">My Portfolio</h1>
+      <div class="small muted" id="goalline">Set your goal and capital under Plan</div>
+    </div>
+    <div class="pricestamp" id="pricestamp">Loading prices…</div>
+  </header>
+
+  <div class="banner" id="demoBanner" hidden>
+    <p id="demoText">You're looking at an <b>example portfolio</b> (the Dividend Portfolio from the sample sheet). Record your first trade to start your own. Your records are saved in this browser only. Use Backup under Plan to keep a copy.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="copyDemo" type="button">Use example as my start</button>
+      <button id="clearDemo" type="button" class="ghost">Start blank</button>
+    </div>
+  </div>
+
+  <div class="strip" id="strip"></div>
+
+  <nav class="tabs" aria-label="Sections">
+    <a href="#overview" data-v="overview">Overview</a>
+    <a href="#holdings" data-v="holdings">Holdings</a>
+    <a href="#trades" data-v="trades">Trades</a>
+    <a href="#watchlist" data-v="watchlist">Watchlist</a>
+    <a href="#plan" data-v="plan">Plan</a>
+  </nav>
+
+  <!-- OVERVIEW -->
+  <section class="view" id="v-overview">
+    <div class="grid2">
+      <div class="sheet"><div class="sheet-head"><h2>By stock</h2><span class="small muted">Market value</span></div><div class="donut" id="pieStock"></div></div>
+      <div class="sheet"><div class="sheet-head"><h2>By sector</h2><span class="small muted">Market value</span></div><div class="donut" id="pieSector"></div></div>
+    </div>
+    <div class="sheet"><div class="sheet-head"><h2>Sector allocation vs plan</h2><span class="small muted">Targets set under Plan</span></div><div class="tscroll"><table class="alloc" id="allocTbl"></table></div></div>
+  </section>
+
+  <!-- HOLDINGS -->
+  <section class="view" id="v-holdings" hidden>
+    <div class="sheet"><div class="sheet-head"><h2>Current holdings</h2><span class="small muted">Average-cost basis · values at last close</span></div><div class="tscroll"><table id="holdTbl"></table></div></div>
+  </section>
+
+  <!-- TRADES -->
+  <section class="view" id="v-trades" hidden>
+    <div class="sheet">
+      <div class="sheet-head"><h2>Record a trade</h2><span class="small muted">Bursa board lot = 100 shares</span></div>
+      <form class="row" id="txForm" autocomplete="off">
+        <label class="f">Type<select id="txKind"><option value="buy">Buy</option><option value="sell">Sell</option><option value="div">Dividend received</option></select></label>
+        <label class="f">Date<input id="txDate" type="date" required></label>
+        <label class="f" style="grid-column:span 2">Stock<input id="txSym" list="symList" placeholder="Name or code, e.g. Maybank or 1155" required></label>
+        <label class="f" id="lblShares">No. of shares<input id="txShares" type="number" min="1" step="1" inputmode="numeric" required></label>
+        <label class="f" id="lblPrice">Price (RM)<input id="txPrice" type="number" min="0" step="0.0001" inputmode="decimal" required></label>
+        <label class="f" id="lblFees">Fees (RM)<input id="txFees" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+        <button type="submit" id="txSave">Save trade</button>
+      </form>
+      <div class="formmsg" id="txMsg"></div>
+    </div>
+    <div class="sheet"><div class="sheet-head"><h2>Trade history</h2><span class="small muted" id="txCount"></span></div><div class="tscroll"><table id="txTbl"></table></div></div>
+  </section>
+
+  <!-- WATCHLIST -->
+  <section class="view" id="v-watchlist" hidden>
+    <div class="sheet">
+      <div class="sheet-head"><h2>Add to watchlist</h2><span class="small muted">Pick from the list, or type any Bursa stock code</span></div>
+      <form class="row" id="wlForm" autocomplete="off">
+        <label class="f" style="grid-column:span 2">Stock<input id="wlSym" list="symList" placeholder="e.g. Inari or 0166" required></label>
+        <label class="f" id="wlNameL" hidden>Short name<input id="wlName" placeholder="e.g. Hartalega"></label>
+        <label class="f" id="wlSecL" hidden>Sector<select id="wlSec"></select></label>
+        <button type="submit">Add</button>
+      </form>
+      <div class="formmsg" id="wlMsg"></div>
+    </div>
+    <div class="sectors" id="wlGrid"></div>
+  </section>
+
+  <!-- PLAN -->
+  <section class="view" id="v-plan" hidden>
+    <div class="sheet">
+      <div class="sheet-head"><h2>Investment goal</h2></div>
+      <form class="row" id="planForm" autocomplete="off">
+        <label class="f">Portfolio name<input id="pName" placeholder="My Portfolio"></label>
+        <label class="f">Capital (RM)<input id="pCapital" type="number" min="0" step="100" inputmode="decimal"></label>
+        <label class="f">Goal value (RM)<input id="pGoal" type="number" min="0" step="100" inputmode="decimal"></label>
+        <label class="f">Reach it by<input id="pBy" type="date"></label>
+      </form>
+      <h3 style="margin:18px 0 8px">Sector targets (% of capital)</h3>
+      <div class="targets" id="targets"></div>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap">
+        <button type="button" id="planSave">Save plan</button>
+        <span class="small" id="planMsg"></span>
+      </div>
+    </div>
+    <div class="sheet">
+      <div class="sheet-head"><h2>Backup</h2><span class="small muted">Your data lives in this browser only</span></div>
+      <p class="small muted" style="margin:0 0 12px">Export a backup file now and then, and to move your portfolio to another device or browser. Clearing your browser data deletes your records.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button type="button" id="exportBtn">Export backup</button>
+        <button type="button" class="ghost" id="importBtn">Import backup</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <span class="small" id="bkMsg"></span>
+      </div>
+    </div>
+  </section>
+
+  <datalist id="symList"></datalist>
+  <footer id="foot">Prices are Yahoo Finance end-of-day closes for Bursa Malaysia (.KL), refreshed each trading day after market close. Stocks you add yourself get prices only once the site owner adds their code to symbols.txt. For tracking and education only, not investment advice.</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const SECTORS = ["Consumer","Construction","Energy","Financial","Healthcare","Industrial","Plantation","Property","REITs","Technology","Telecommunication","Transport","Utilities"];
+// Built-in directory: the watchlist universe from the sample sheet.
+const DIR0 = [["Aeon","6599","Consumer"],["Astro","6399","Consumer"],["AirAsia (Capital A)","5099","Consumer"],["Genting","3182","Consumer"],["GenM","4715","Consumer"],["Sime","4197","Consumer"],["Amway","6351","Consumer"],["Magni","7087","Consumer"],["Liihen","7089","Consumer"],["Bauto","5248","Consumer"],["MBMR","5983","Consumer"],["Nestle","4707","Consumer"],["Carlsberg","2836","Consumer"],["Heineken","3255","Consumer"],["BAT","4162","Consumer"],["Gamuda","5398","Construction"],["Gkent","3204","Construction"],["Hengyuan","4324","Energy"],["PetronM","3042","Energy"],["Yinson","7293","Energy"],["Maybank","1155","Financial"],["RHB","1066","Financial"],["LPI","8621","Financial"],["HLCap","5274","Financial"],["PBB","1295","Financial"],["CIMB","1023","Financial"],["Bursa","1818","Financial"],["IHH","5225","Healthcare"],["KPJ","5878","Healthcare"],["Duopharma","7148","Healthcare"],["Cypark","5184","Industrial"],["Solarvest","0215","Industrial"],["HLIndustry","3301","Industrial"],["Scientex","4731","Industrial"],["Luxchem","5143","Industrial"],["IOI","1961","Plantation"],["UtdPlt","2089","Plantation"],["SD Guthrie (SimePlt)","5285","Plantation"],["Matrix","5236","Property"],["UOADev","5200","Property"],["SP Setia","8664","Property"],["Mahsing","8583","Property"],["Axreit","5106","REITs"],["Sentral","5123","REITs"],["Sunreit","5176","REITs"],["KLCC","5235SS","REITs"],["Inari","0166","Technology"],["MPI","3867","Technology"],["MI","5286","Technology"],["QES","0196","Technology"],["Zetrix (MYEG)","0138","Technology"],["Vitrox","0097","Technology"],["Unisem","5005","Technology"],["Greatec","0208","Technology"],["Frontkn","0128","Technology"],["Aemulus","0181","Technology"],["D&O","7204","Technology"],["Gtronic","7022","Technology"],["Maxis","6012","Telecommunication"],["Axiata","6888","Telecommunication"],["CDB (Digi)","6947","Telecommunication"],["TM","4863","Telecommunication"],["Time","5031","Telecommunication"],["MISC","3816","Transport"],["WPRTS","5246","Transport"],["Tenaga","5347","Utilities"],["PetGas","6033","Utilities"],["GasMsia","5209","Utilities"],["Malakof","5264","Utilities"],["MFCB","3069","Utilities"]];
+const DIR = new Map(); // symbol -> {name, code, sector}
+DIR0.forEach(([name,code,sector]) => DIR.set(code+".KL",{name,code,sector}));
+
+// Example portfolio = "Simulation 1 – Dividend Portfolio" from the sample workbook (marked as example in the UI).
+const DEMO = {
+  settings:{name:"Dividend Portfolio (example)",capital:100000,goal:110000,by:"2026-12-31",targets:{Consumer:30,Financial:25,Utilities:25,Industrial:20}},
+  watch:["6599.KL","1155.KL","5225.KL","0166.KL","6012.KL","5347.KL","1961.KL","5106.KL","5398.KL","3816.KL"],
+  tx:[["1818.KL",1200,6.40],["4162.KL",600,13.80],["6399.KL",8000,0.95],["1155.KL",1500,8.03],["8621.KL",1000,13.78],["5347.KL",1400,9.45],["5264.KL",12000,0.82],["3301.KL",1000,9.00],["7087.KL",5000,1.96]]
+    .map(([symbol,shares,price],i)=>({id:"demo"+i,kind:"buy",date:"2026-01-05",symbol,shares,price,fees:0}))
+};
+
+const S = { canWrite:true, pricesLoaded:false, demo:true, settings:{}, watch:[], tx:[], prices:{}, extraSyms:{} };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const rm = (v,d=2) => (v<0?"−":"")+"RM "+Math.abs(v).toLocaleString("en-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
+const n2 = (v,d=2) => (v<0?"−":"")+Math.abs(v).toLocaleString("en-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct = (v,d=2) => (v>0?"+":v<0?"−":"")+Math.abs(v*100).toFixed(d)+"%";
+const signCls = v => v>0.00001?"up":v<-0.00001?"down":"flat";
+const fmtDate = s => { if(!s) return ""; const d=new Date(s+"T00:00:00"); return isNaN(d)?s:d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}); };
+const info = sym => DIR.get(sym) || S.extraSyms[sym] || {name:sym.replace(".KL",""),code:sym.replace(".KL",""),sector:"Unclassified"};
+const today = () => { const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10); };
+
+// ---------- symbol input ----------
+function fillDatalist(){
+  const all=[...DIR.entries(),...Object.entries(S.extraSyms).filter(([k])=>!DIR.has(k))];
+  $("symList").innerHTML = all.sort((a,b)=>a[1].name.localeCompare(b[1].name)).map(([s,i])=>`<option value="${esc(i.name)} · ${esc(i.code)}"></option>`).join("");
+}
+function resolveSym(text){
+  const t=(text||"").trim(); if(!t) return null;
+  const m=t.match(/·\s*([0-9A-Z]{4,6})\s*$/i); const code=(m?m[1]:t).toUpperCase().replace(/\.KL$/,"");
+  if(DIR.has(code+".KL")||S.extraSyms[code+".KL"]) return code+".KL";
+  for(const [s,i] of [...DIR.entries(),...Object.entries(S.extraSyms)]) if(i.name.toLowerCase()===t.toLowerCase()) return s;
+  if(/^[0-9]{4}[A-Z]{0,2}$/.test(code)) return code+".KL"; // unknown but valid-looking Bursa code
+  return null;
+}
+
+// ---------- portfolio maths (average cost) ----------
+function compute(){
+  const txs=[...S.tx].sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.created||0)-(b.created||0));
+  const pos={}; let realised=0, dividends=0, bought=0, sold=0;
+  for(const t of txs){
+    const p=pos[t.symbol] ||= {symbol:t.symbol,shares:0,cost:0,realised:0,div:0,first:t.date};
+    if(t.kind==="buy"){ const c=t.shares*t.price+(t.fees||0); p.shares+=t.shares; p.cost+=c; bought+=c; }
+    else if(t.kind==="sell"){ const avg=p.shares?p.cost/p.shares:0, q=Math.min(t.shares,p.shares), proceeds=t.shares*t.price-(t.fees||0);
+      const r=proceeds-avg*q; p.realised+=r; realised+=r; p.cost-=avg*q; p.shares-=q; sold+=proceeds; }
+    else if(t.kind==="div"){ const a=t.amount ?? (t.shares*t.price); p.div+=a; dividends+=a; }
+  }
+  const rows=Object.values(pos).filter(p=>p.shares>0).map(p=>{
+    const pr=S.prices[p.symbol]; const last=pr?.close ?? null, prev=pr?.prevClose ?? null;
+    const mv = last!=null ? p.shares*last : p.cost; // no price yet → show at cost
+    return {...p, ...info(p.symbol), avg:p.cost/p.shares, last, prev, mv, priced:last!=null,
+      upl: last!=null? mv-p.cost : 0, day: last!=null&&prev!=null ? p.shares*(last-prev) : 0};
+  }).sort((a,b)=>b.mv-a.mv);
+  const mv=rows.reduce((s,r)=>s+r.mv,0), cost=rows.reduce((s,r)=>s+r.cost,0), upl=rows.reduce((s,r)=>s+r.upl,0), day=rows.reduce((s,r)=>s+r.day,0);
+  const prevMv=mv-day;
+  const cap=+S.settings.capital||0; const cash = cap? cap-bought+sold+dividends : null;
+  return {rows,mv,cost,upl,day,dayPct:prevMv?day/prevMv:0,realised,dividends,cash,total:mv+(cash||0)};
+}
+
+// ---------- rendering ----------
+const SLOTS=["--s1","--s2","--s3","--s4","--s5","--s6","--s7","--s8"];
+function donut(el, items, valueLabel){
+  const tot=items.reduce((s,i)=>s+i.v,0);
+  if(!tot){ el.innerHTML=`<div class="empty" style="width:100%"><b>Nothing to chart yet</b>Record a buy under Trades and it shows up here.</div>`; return; }
+  // top 7 by value keep a colour; the rest fold into Other. Colour follows first-acquired order, not rank.
+  const sorted=[...items].sort((a,b)=>b.v-a.v); let keep=sorted.slice(0,sorted.length>8?7:8), rest=sorted.slice(keep.length);
+  const order=[...keep].sort((a,b)=>(a.o??0)-(b.o??0)); order.forEach((it,i)=>it.c=`var(${SLOTS[i]})`);
+  const segs=[...keep]; if(rest.length) segs.push({k:`Other (${rest.length})`,v:rest.reduce((s,i)=>s+i.v,0),c:"var(--other)"});
+  const R=90,r=58,cx=100,cy=100; let a0=-Math.PI/2; const gap=segs.length>1?0.012:0;
+  const paths=segs.map((s,i)=>{
+    const ang=s.v/tot*Math.PI*2; const a1=a0+ang; const g=Math.min(gap,ang/3);
+    const p=(rad,a)=>[cx+rad*Math.cos(a),cy+rad*Math.sin(a)].map(x=>x.toFixed(2)).join(" ");
+    let d;
+    if(segs.length===1){ d=`M ${cx} ${cy-R} A ${R} ${R} 0 1 1 ${cx-0.01} ${cy-R} L ${cx-0.01} ${cy-r} A ${r} ${r} 0 1 0 ${cx} ${cy-r} Z`; }
+    else { const large=ang-2*g>Math.PI?1:0; d=`M ${p(R,a0+g)} A ${R} ${R} 0 ${large} 1 ${p(R,a1-g)} L ${p(r,a1-g)} A ${r} ${r} 0 ${large} 0 ${p(r,a0+g)} Z`; }
+    a0=a1; return `<path d="${d}" fill="${s.c}" data-i="${i}" tabindex="0" aria-label="${esc(s.k)} ${(s.v/tot*100).toFixed(1)}%"></path>`;
+  }).join("");
+  el.innerHTML=`<svg viewBox="0 0 200 200" role="img" aria-label="${esc(valueLabel)} breakdown">${paths}
+    <text x="100" y="94" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--f-body)">${segs.length} ${segs.length===1?"slice":"slices"}</text>
+    <text x="100" y="114" text-anchor="middle" font-size="15" fill="var(--ink)" font-family="var(--f-mono)">${tot>=1e6?(tot/1e6).toFixed(2)+"m":(tot/1e3).toFixed(1)+"k"}</text></svg>
+    <ul class="legend">${segs.map((s,i)=>`<li data-i="${i}"><span class="sw" style="background:${s.c}"></span><span class="nm">${esc(s.k)}</span><span class="pc">${(s.v/tot*100).toFixed(1)}%</span><span class="vl">${n2(s.v,0)}</span></li>`).join("")}</ul>`;
+  const tip=$("tip"), lis=el.querySelectorAll("li");
+  const hi=(i,e)=>{ lis.forEach(l=>l.classList.toggle("hot",l.dataset.i==i)); if(i==null){tip.hidden=true;return;}
+    const s=segs[i]; tip.textContent=`${s.k}: ${rm(s.v,0)} · ${(s.v/tot*100).toFixed(1)}%`; tip.hidden=false;
+    if(e){ tip.style.left=Math.min(e.clientX+12,innerWidth-tip.offsetWidth-8)+"px"; tip.style.top=(e.clientY+12)+"px"; } };
+  el.querySelectorAll("path").forEach(pth=>{ pth.addEventListener("pointermove",e=>hi(pth.dataset.i,e)); pth.addEventListener("pointerleave",()=>hi(null));
+    pth.addEventListener("focus",()=>{const b=pth.getBoundingClientRect();hi(pth.dataset.i,{clientX:b.right,clientY:b.top});}); pth.addEventListener("blur",()=>hi(null)); });
+}
+
+function spark(hist){
+  if(!hist||hist.length<2) return `<svg class="spark" viewBox="0 0 64 22" aria-hidden="true"></svg>`;
+  const lo=Math.min(...hist),hi=Math.max(...hist),span=hi-lo||1;
+  const pts=hist.map((v,i)=>[i/(hist.length-1)*60+2, 19-(v-lo)/span*16]);
+  const up=hist[hist.length-1]>=hist[0]; const col=up?"var(--up)":"var(--down)";
+  const d=pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const last=pts[pts.length-1];
+  return `<svg class="spark" viewBox="0 0 64 22" aria-hidden="true"><path d="${d} L 62 21 L 2 21 Z" fill="${col}" opacity=".12"></path><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round"></path><circle cx="${last[0]}" cy="${last[1]}" r="2" fill="${col}"></circle></svg>`;
+}
+
+function render(){
+  const P=compute(), st=S.settings;
+  $("title").textContent = st.name || "My Portfolio";
+  $("demoBanner").hidden = !S.demo;
+  $("copyDemo").hidden = $("clearDemo").hidden = !S.canWrite;
+  // goal line
+  if(st.goal){ $("goalline").textContent = `Goal: ${rm(+st.goal,0)}${st.by?" by "+fmtDate(st.by):""}${st.capital?" · Capital "+rm(+st.capital,0):""}`; }
+  else $("goalline").textContent="Set your goal and capital under Plan";
+  // price stamp
+  const dates=Object.values(S.prices).map(p=>p.asOf).filter(Boolean).sort();
+  $("pricestamp").innerHTML = dates.length ? `<div class="label">Prices as of</div><div class="num">${fmtDate(dates[dates.length-1])} close</div><div class="small muted">Yahoo Finance · ${Object.keys(S.prices).length} stocks</div>` : (S.pricesLoaded?"Waiting for price data…":"Prices unavailable: showing values at cost");
+  // strip
+  const goalPct = st.goal ? Math.max(0,Math.min(1,P.total/(+st.goal))) : null;
+  $("strip").innerHTML = `
+    <div><span class="label">Market value</span><span class="big">${rm(P.mv)}</span><span class="small ${signCls(P.day)}">${P.day?(P.day>0?"▲ ":"▼ ")+rm(Math.abs(P.day))+" ("+pct(P.dayPct)+") today":"No change today"}</span></div>
+    <div><span class="label">Unrealised P/L</span><span class="big ${signCls(P.upl)}">${rm(P.upl)}</span><span class="small muted">${P.cost?pct(P.upl/P.cost)+" on cost "+rm(P.cost,0):"—"}</span></div>
+    <div><span class="label">Realised P/L + dividends</span><span class="big ${signCls(P.realised+P.dividends)}">${rm(P.realised+P.dividends)}</span><span class="small muted">Sales ${rm(P.realised,0)} · Div ${rm(P.dividends,0)}</span></div>
+    <div><span class="label">Cash</span><span class="big">${P.cash==null?"—":rm(P.cash)}</span><span class="small muted">${P.cash==null?"Add capital under Plan":"Capital less net buys"}</span></div>
+    <div><span class="label">Goal progress</span><span class="big">${goalPct==null?"—":(goalPct*100).toFixed(1)+"%"}</span>${goalPct==null?'<span class="small muted">No goal set</span>':`<div class="goalbar" role="progressbar" aria-valuenow="${Math.round(goalPct*100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${(goalPct*100).toFixed(1)}%"></i></div><span class="small muted">${rm(P.total,0)} of ${rm(+st.goal,0)}</span>`}</div>`;
+  // pies
+  donut($("pieStock"), P.rows.map(r=>({k:r.name,v:r.mv,o:r.first})), "Holdings");
+  const bySec={}; P.rows.forEach(r=>{ (bySec[r.sector] ||= {k:r.sector,v:0,o:SECTORS.indexOf(r.sector)}).v+=r.mv; });
+  if(P.cash>0) bySec.Cash={k:"Cash",v:P.cash,o:99};
+  donut($("pieSector"), Object.values(bySec), "Sectors");
+  // allocation vs plan
+  const tg=st.targets||{}, cap=+st.capital||0, secs=[...new Set([...Object.keys(tg).filter(k=>+tg[k]>0),...Object.keys(bySec).filter(k=>k!=="Cash")])];
+  const base=cap||P.mv||1;
+  $("allocTbl").innerHTML = secs.length ? `<thead><tr><th>Sector</th><th class="r">Target</th><th class="r">Actual</th><th style="width:40%">Actual vs target</th><th class="r">Gap (RM)</th></tr></thead><tbody>${secs.sort((a,b)=>SECTORS.indexOf(a)-SECTORS.indexOf(b)).map(s=>{
+      const t=(+tg[s]||0)/100, a=(bySec[s]?.v||0)/base, gapRM=t*base-(bySec[s]?.v||0);
+      return `<tr><td>${esc(s)}</td><td class="r num">${t?(t*100).toFixed(0)+"%":"—"}</td><td class="r num">${(a*100).toFixed(1)}%</td><td><span class="bar" style="width:${Math.min(100,a*200).toFixed(1)}%"></span>${t?`<br><span class="bar t" style="width:${Math.min(100,t*200).toFixed(1)}%"></span>`:""}</td><td class="r num ${t?(gapRM>0?"":"down"):""}">${t?(gapRM>0?"Buy "+n2(gapRM,0):"Over "+n2(-gapRM,0)):"—"}</td></tr>`;}).join("")}</tbody>` : `<tbody><tr><td class="empty"><b>No sector plan yet</b>Set target percentages under Plan to compare.</td></tr></tbody>`;
+  // holdings
+  $("holdTbl").innerHTML = P.rows.length ? `<thead><tr><th>Stock</th><th>Sector</th><th class="r">Shares</th><th class="r">Avg cost</th><th class="r">Last close</th><th class="r">Day</th><th class="r">Market value</th><th class="r">Unrealised P/L</th><th class="r">Weight</th></tr></thead><tbody>${P.rows.map(r=>{
+      const dc=r.priced&&r.prev?(r.last-r.prev)/r.prev:0;
+      return `<tr><td><b>${esc(r.name)}</b><span class="sub num">${esc(r.code)}</span></td><td>${esc(r.sector)}</td><td class="r num">${n2(r.shares,0)}</td><td class="r num">${n2(r.avg,4)}</td><td class="r num">${r.priced?n2(r.last,3):'<span class="chip pending">Pending</span>'}</td><td class="r num ${signCls(dc)}">${r.priced?pct(dc):"—"}</td><td class="r num">${n2(r.mv)}</td><td class="r num ${signCls(r.upl)}">${r.priced?n2(r.upl)+'<span class="sub">'+pct(r.upl/r.cost)+"</span>":"—"}</td><td class="r num">${(r.mv/(P.mv||1)*100).toFixed(1)}%</td></tr>`;}).join("")}</tbody><tfoot><tr><td colspan="6">Total</td><td class="r num">${n2(P.mv)}</td><td class="r num ${signCls(P.upl)}">${n2(P.upl)}</td><td class="r num">100%</td></tr></tfoot>`
+    : `<tbody><tr><td class="empty"><b>No open positions</b>Record a buy under Trades to see it here.</td></tr></tbody>`;
+  // trades
+  const txs=[...S.tx].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.created||0)-(a.created||0));
+  $("txCount").textContent = txs.length ? `${txs.length} record${txs.length>1?"s":""}` : "";
+  $("txTbl").innerHTML = txs.length ? `<thead><tr><th>Date</th><th>Type</th><th>Stock</th><th class="r">Shares</th><th class="r">Price</th><th class="r">Fees</th><th class="r">Amount (RM)</th><th></th></tr></thead><tbody>${txs.map(t=>{
+      const i=info(t.symbol), amt=t.kind==="div"?(t.amount??t.shares*t.price):t.kind==="buy"?-(t.shares*t.price+(t.fees||0)):t.shares*t.price-(t.fees||0);
+      return `<tr><td class="num">${esc(fmtDate(t.date))}</td><td><span class="chip ${t.kind}">${t.kind==="div"?"DIVIDEND":t.kind.toUpperCase()}</span></td><td>${esc(i.name)} <span class="muted num small">${esc(i.code)}</span></td><td class="r num">${t.kind==="div"&&t.amount!=null&&!t.shares?"—":n2(t.shares,0)}</td><td class="r num">${t.kind==="div"&&!t.price?"—":n2(t.price,4)}</td><td class="r num">${t.fees?n2(t.fees):"—"}</td><td class="r num ${signCls(amt)}">${n2(amt)}</td><td class="r">${S.canWrite&&!S.demo?`<button class="link" data-del="${esc(t.id)}" aria-label="Delete this trade">Delete</button>`:""}</td></tr>`;}).join("")}</tbody>`
+    : `<tbody><tr><td class="empty"><b>No trades yet</b>Your buys, sells and dividends will be listed here, newest first.</td></tr></tbody>`;
+  // watchlist
+  const bySecW={}; S.watch.forEach(s=>{ const i=info(s); (bySecW[i.sector] ||= []).push(s); });
+  const held=new Set(P.rows.map(r=>r.symbol));
+  const si=x=>{const i=SECTORS.indexOf(x);return i<0?99:i;}; const secOrder=Object.keys(bySecW).sort((a,b)=>si(a)-si(b));
+  $("wlGrid").innerHTML = secOrder.length ? secOrder.map(sec=>`<div class="sheet sector"><h3><span>${esc(sec)}</span><span class="small muted">${bySecW[sec].length}</span></h3><ul class="wl">${bySecW[sec].map(s=>{
+      const i=info(s), p=S.prices[s], dc=p&&p.prevClose?(p.close-p.prevClose)/p.prevClose:0;
+      return `<li><span class="nm" title="${esc(p?.longName||i.name)}">${held.has(s)?"● ":""}${esc(i.name)}<small>${esc(i.code)}</small></span>${spark(p?.history)}<span class="num r">${p?n2(p.close,3):'<span class="chip pending">Pending</span>'}</span><span class="num small ${signCls(dc)}" style="min-width:56px;text-align:right">${p?pct(dc):""}</span>${S.canWrite&&!S.demo?`<button class="link" data-unwatch="${esc(s)}" aria-label="Remove ${esc(i.name)} from watchlist">✕</button>`:"<span></span>"}</li>`;}).join("")}</ul></div>`).join("")
+    : `<div class="sheet empty"><b>Your watchlist is empty</b>Add stocks you want to follow above. Prices update after each market close.</div>`;
+  // plan form (don't clobber while typing)
+  if(!document.activeElement || !$("v-plan").contains(document.activeElement)){
+    $("pName").value=st.name||""; $("pCapital").value=st.capital||""; $("pGoal").value=st.goal||""; $("pBy").value=st.by||"";
+    $("targets").innerHTML = SECTORS.map(s=>`<label class="f">${s}<input type="number" min="0" max="100" step="1" id="t-${s}" value="${tg[s]||""}" placeholder="0"></label>`).join("");
+  }
+  const writable=S.canWrite;
+  ["txSave","planSave"].forEach(id=>$(id).disabled=!writable);
+  $("wlForm").querySelector("button").disabled=!writable;
+}
+
+// ---------- routing ----------
+const VIEWS=["overview","holdings","trades","watchlist","plan"];
+function route(){ const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):"overview";
+  VIEWS.forEach(x=>{ $("v-"+x).hidden = x!==v; });
+  document.querySelectorAll("nav.tabs a").forEach(a=>{ if(a.dataset.v===v) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); }); }
+addEventListener("hashchange",route);
+
+// ---------- data layer ----------
+const KEY="bursa-tracker-v1", SYMKEY="bursa-tracker-symbols-v1";
+function readStore(){ try{ return JSON.parse(localStorage.getItem(KEY)||"null")||{}; }catch(e){ return {}; } }
+function saveStore(st){ localStorage.setItem(KEY,JSON.stringify(st)); }
+function applyStore(st){
+  const ids=Object.keys(st);
+  if(!ids.length){ loadDemo(); return; }
+  S.demo=false; S.settings=st.settings||{}; S.watch=st.watchlist?.items||[];
+  S.tx=ids.filter(k=>k.startsWith("tx-")).map(k=>({...st[k],id:k}));
+}
+const userCol = () => ({ doc:id=>({
+  set:async data=>{ const st=readStore(); st[id]=data; saveStore(st); applyStore(st); render(); },
+  delete:async()=>{ const st=readStore(); delete st[id]; saveStore(st); applyStore(st); render(); }
+}) });
+function msg(id,text,bad){ const e=$(id); e.textContent=text; e.className="formmsg "+(bad?"down":"up"); if(!bad) setTimeout(()=>{ if(e.textContent===text) e.textContent=""; },3500); }
+function loadDemo(){ S.demo=true; S.settings=structuredClone(DEMO.settings); S.watch=[...DEMO.watch]; S.tx=DEMO.tx.map(t=>({...t})); }
+function errText(e){ return e?.name==="QuotaExceededError"?"Browser storage is full. Delete some old records and try again.":"Couldn't save in this browser. Check that site data/cookies aren't blocked (private windows may not save)."; }
+
+async function ensureSymbol(sym, name, sector){
+  if(DIR.has(sym)||S.extraSyms[sym]) return;
+  const rec={name:name||sym.replace(".KL",""),code:sym.replace(".KL",""),sector:sector||"Unclassified",addedAt:Date.now()};
+  S.extraSyms[sym]=rec; fillDatalist();
+  try{ localStorage.setItem(SYMKEY,JSON.stringify(S.extraSyms)); }catch(e){}
+}
+async function writeDoc(id,data){ await userCol().doc(id).set(data); }
+
+$("txKind").addEventListener("change",()=>{ const d=$("txKind").value==="div";
+  $("lblShares").firstChild.textContent = d?"Shares held":"No. of shares"; $("lblPrice").firstChild.textContent = d?"Dividend per share (RM)":"Price (RM)"; $("lblFees").hidden=d; });
+$("txForm").addEventListener("submit", async e=>{
+  e.preventDefault(); if(!S.canWrite) return;
+  const sym=resolveSym($("txSym").value); if(!sym) return msg("txMsg","Pick a stock from the list, or type its 4-digit Bursa code (e.g. 1155).",true);
+  const kind=$("txKind").value, shares=+$("txShares").value, price=+$("txPrice").value, fees=+$("txFees").value||0, date=$("txDate").value;
+  if(!(shares>0)||!(price>=0)||!date) return msg("txMsg","Fill in date, shares and price.",true);
+  if(kind==="sell"){ const held=compute().rows.find(r=>r.symbol===sym)?.shares||0; if(shares>held) return msg("txMsg",`You hold ${n2(held,0)} shares of ${info(sym).name}; you can't sell ${n2(shares,0)}.`,true); }
+  const t={kind,date,symbol:sym,shares,price,fees:kind==="div"?0:fees,created:Date.now()}; if(kind==="div") t.amount=+(shares*price).toFixed(2);
+  const id="tx-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  $("txSave").disabled=true;
+  try{ if(S.demo) await startOwn(); await ensureSymbol(sym); await writeDoc(id,t);
+    if(!S.watch.includes(sym)){ S.watch=[...S.watch,sym]; await writeDoc("watchlist",{items:S.watch}); }
+    msg("txMsg",`Saved: ${kind==="div"?"dividend from":kind} ${info(sym).name}.`); $("txShares").value=$("txPrice").value=$("txFees").value=""; $("txSym").value="";
+  }catch(err){ msg("txMsg",errText(err),true); } finally{ $("txSave").disabled=!S.canWrite; }
+});
+$("txTbl").addEventListener("click", async e=>{ const id=e.target.closest("[data-del]")?.dataset.del; if(!id) return;
+  const b=e.target.closest("button"); if(b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent="Confirm delete"; b.style.color="var(--down)"; setTimeout(()=>{ if(b.isConnected){b.dataset.armed="";b.textContent="Delete";b.style.color="";} },3000); return; }
+  try{ await userCol().doc(id).delete(); }catch(err){ alertMsg(errText(err)); } });
+function alertMsg(t){ msg("txMsg",t,true); }
+
+$("wlSym").addEventListener("input",()=>{ const t=$("wlSym").value.trim(); const sym=resolveSym(t); const unknown=!!sym&&!DIR.has(sym)&&!S.extraSyms[sym]; $("wlNameL").hidden=$("wlSecL").hidden=!unknown; });
+$("wlSec").innerHTML=SECTORS.map(s=>`<option>${s}</option>`).join("");
+$("wlForm").addEventListener("submit", async e=>{
+  e.preventDefault(); if(!S.canWrite) return;
+  const sym=resolveSym($("wlSym").value); if(!sym) return msg("wlMsg","Pick a stock from the list, or type its 4-digit Bursa code.",true);
+  if(S.watch.includes(sym)) return msg("wlMsg",`${info(sym).name} is already on your watchlist.`,true);
+  try{ if(S.demo) await startOwn();
+    const isNew=!DIR.has(sym)&&!S.extraSyms[sym];
+    await ensureSymbol(sym,$("wlName").value.trim(),$("wlSec").value);
+    S.watch=[...S.watch,sym]; await writeDoc("watchlist",{items:S.watch});
+    msg("wlMsg", isNew?`Added ${info(sym).name}. Its price appears after the next market close.`:`Added ${info(sym).name}.`);
+    $("wlSym").value=$("wlName").value=""; $("wlNameL").hidden=$("wlSecL").hidden=true;
+  }catch(err){ msg("wlMsg",errText(err),true); }
+});
+$("wlGrid").addEventListener("click", async e=>{ const s=e.target.closest("[data-unwatch]")?.dataset.unwatch; if(!s) return;
+  S.watch=S.watch.filter(x=>x!==s); render(); try{ await writeDoc("watchlist",{items:S.watch}); }catch(err){ msg("wlMsg",errText(err),true); } });
+
+$("planSave").addEventListener("click", async ()=>{ if(!S.canWrite) return;
+  const targets={}; SECTORS.forEach(s=>{ const v=+$("t-"+s).value; if(v>0) targets[s]=v; });
+  const sum=Object.values(targets).reduce((a,b)=>a+b,0);
+  const st={name:$("pName").value.trim(),capital:+$("pCapital").value||0,goal:+$("pGoal").value||0,by:$("pBy").value||"",targets};
+  try{ if(S.demo) await startOwn(); await writeDoc("settings",st); S.settings=st; $("planMsg").className="small up"; $("planMsg").textContent = sum>100?`Saved. Note: targets add up to ${sum}%.`:`Saved. Targets total ${sum}%${sum<100?`, ${100-sum}% left as cash`:""}.`; document.activeElement?.blur(); render(); }
+  catch(err){ $("planMsg").className="small down"; $("planMsg").textContent=errText(err); }
+});
+
+// Leave example mode: blank, or keep the example as the user's own starting records.
+async function startOwn(){
+  S.demo=false; S.tx=[]; S.watch=[]; S.settings={};
+  await writeDoc("watchlist",{items:S.watch});
+}
+$("clearDemo").addEventListener("click", async ()=>{ try{ await startOwn(); render(); }catch(err){ msg("txMsg",errText(err),true); } });
+$("copyDemo").addEventListener("click", async ()=>{
+  const b=$("copyDemo"); b.disabled=true;
+  try{ S.demo=false; const now=Date.now();
+    await writeDoc("settings",{...DEMO.settings,name:"My Portfolio"});
+    await writeDoc("watchlist",{items:[...new Set([...DEMO.watch,...DEMO.tx.map(t=>t.symbol)])]});
+    for(const [i,t] of DEMO.tx.entries()){ const {id,...rest}=t; await writeDoc("tx-ex"+i,{...rest,created:now+i}); }
+  }catch(err){ S.demo=true; msg("txMsg",errText(err),true); } finally{ b.disabled=false; }
+});
+
+// ---------- boot ----------
+$("txDate").value=today();
+loadDemo(); route();
+
+try{ S.extraSyms=JSON.parse(localStorage.getItem(SYMKEY)||"{}")||{}; }catch(e){}
+fillDatalist(); applyStore(readStore()); render();
+fetch("prices.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(r.status))
+  .then(j=>{ S.prices=j.quotes||{}; S.pricesLoaded=true; render(); })
+  .catch(()=>{ S.pricesLoaded=false; render(); });
+addEventListener("storage",e=>{ if(e.key===KEY){ applyStore(readStore()); render(); } });
+
+// backup
+$("exportBtn").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify({app:"bursa-portfolio-tracker",version:1,exportedAt:new Date().toISOString(),data:readStore(),symbols:S.extraSyms},null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="bursa-portfolio-backup-"+today()+".json"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  $("bkMsg").className="small up"; $("bkMsg").textContent="Backup downloaded.";
+});
+$("importBtn").addEventListener("click",()=>$("importFile").click());
+$("importFile").addEventListener("change",async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{ const j=JSON.parse(await f.text()); if(j.app!=="bursa-portfolio-tracker"||typeof j.data!=="object") throw 0;
+    if(Object.keys(readStore()).length && !confirm("Replace the portfolio in this browser with the backup?")) return;
+    saveStore(j.data); if(j.symbols){ S.extraSyms={...S.extraSyms,...j.symbols}; localStorage.setItem(SYMKEY,JSON.stringify(S.extraSyms)); fillDatalist(); }
+    applyStore(readStore()); render(); $("bkMsg").className="small up"; $("bkMsg").textContent="Backup restored.";
+  }catch(err){ $("bkMsg").className="small down"; $("bkMsg").textContent="That file isn't a tracker backup."; }
+});
+})();
+</script>
+
+</body></html>
